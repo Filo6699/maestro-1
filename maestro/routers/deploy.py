@@ -1,5 +1,6 @@
 from datetime import datetime
 from io import BytesIO
+from typing import Optional
 
 from aiogram import Router, F
 from aiogram.filters import Command, CommandObject
@@ -13,7 +14,7 @@ from maestro.text_to_png import text_to_png
 router = Router()
 
 
-def is_allowed(chat_id: int, config: Config, server: Server = None) -> bool:
+def is_allowed(chat_id: int, config: Config, server: Optional[Server] = None) -> bool:
     """Check if a chat_id has access to a server or globally."""
     if chat_id in config.allowed_chat_ids:
         return True
@@ -53,6 +54,9 @@ async def handle_command_deploy(
             name for name, server in config.servers.items()
             if is_allowed(chat_id, config, server)
         )
+        if not servers:
+            await message.reply("No servers available for you")
+            return
         await message.reply(
             f"Usage: /deploy <server> <action>\nAvailable servers:\n{servers}"
         )
