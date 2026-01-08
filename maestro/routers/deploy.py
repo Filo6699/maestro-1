@@ -92,12 +92,14 @@ async def handle_command_deploy(
         await message.reply("You are not allowed to deploy to this server")
         return
 
-    actions = [server.actions.get(action)]
-    if not actions and action != "all":
-        await message.reply("Action not found")
-        return
     if action == "all":
         actions = server.actions.values()
+    else:
+        action_obj = server.actions.get(action)
+        if not action_obj:
+            await message.reply("Action not found")
+            return
+        actions = [action_obj]
 
     for action in actions:
         await deploy_use_case(message, server, action)
