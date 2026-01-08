@@ -13,6 +13,15 @@ from maestro.text_to_png import text_to_png
 router = Router()
 
 
+def is_allowed(chat_id: int, config: Config, server: Server = None) -> bool:
+    """Check if a chat_id has access to a server or globally."""
+    if chat_id in config.allowed_chat_ids:
+        return True
+    if server and chat_id in server.allowed_chat_ids:
+        return True
+    return False
+
+
 def run_action(server: Server, action: Action) -> (BytesIO, BytesIO):
     name = f"deploy_result_{action.name}_{datetime.now()}"
     client = connect_to_server(server)
@@ -37,12 +46,13 @@ def run_action(server: Server, action: Action) -> (BytesIO, BytesIO):
 async def handle_command_deploy(
     message: Message, command: CommandObject, config: Config, chat_id: int
 ) -> None:
-    allowed = chat_id in config.allowed_chat_ids
-
     args = (command.args or "").split()
     if len(args) == 0:
         # here we will show the list of servers
-        servers = "\n".join(name for name in config.servers)
+        servers = "\n".join(
+            name for name, server in config.servers.items()
+            if is_allowed(chat_id, config, server)
+        )
         await message.reply(
             f"Usage: /deploy <server> <action>\nAvailable servers:\n{servers}"
         )
@@ -52,6 +62,10 @@ async def handle_command_deploy(
         server = config.servers.get(args[0])
         if not server:
             await message.reply("Server not found")
+            return
+        # Check if user has access to this server
+        if not is_allowed(chat_id, config, server):
+            await message.reply("You are not allowed to access this server")
             return
         actions = "\n".join(
             f" - {action.name}: {action.description}"
@@ -74,11 +88,9 @@ async def handle_command_deploy(
     if not server:
         await message.reply("Server not found")
         return
-    if not allowed and chat_id not in server.allowed_chat_ids:
+    if not is_allowed(chat_id, config, server):
         await message.reply("You are not allowed to deploy to this server")
         return
-    else:
-        allowed = True
 
     actions = [server.actions.get(action)]
     if not actions and action != "all":
@@ -86,10 +98,6 @@ async def handle_command_deploy(
         return
     if action == "all":
         actions = server.actions.values()
-
-    if not allowed:
-        await message.reply("You are not allowed to deploy")
-        return
 
     for action in actions:
         await deploy_use_case(message, server, action)
