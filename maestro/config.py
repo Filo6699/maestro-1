@@ -30,12 +30,18 @@ class Config(BaseSettings):
     @classmethod
     def using_yaml(cls, filename: str = "servers.yaml"):
         with open(filename, "r") as file:
-            servers = yaml.safe_load(file)
+            data = yaml.safe_load(file) or {}
+
+        # global access users
+        allowed_chat_ids = data.pop("allowed_chat_ids", [])
+
         servers = {
-            alias: Server.model_validate(server) for alias, server in servers.items()
+            alias: Server.model_validate(server)
+            for alias, server in data.items()
+            if isinstance(server, dict)
         }
 
-        return cls(servers=servers)
+        return cls(servers=servers, allowed_chat_ids=allowed_chat_ids)
 
 
 class Server(BaseModel):
@@ -44,9 +50,11 @@ class Server(BaseModel):
     port: int = 22
     user: str = "root"
 
-    # who can run actions of this exact server
+    # who can run actions of this server
     allowed_chat_ids: list[int] = []
     actions: dict[str, Action | str] = {}
+    # show the run all button
+    allow_run_all: bool = True
 
     def model_post_init(self, __context: Any) -> None:
         for key, value in self.actions.items():
