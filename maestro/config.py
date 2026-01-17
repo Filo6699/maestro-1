@@ -67,7 +67,7 @@ class Server(BaseModel):
 class Action(BaseModel):
     name: str = ""
     command: str
-    description: str = ""
+    title: str = ""
 
 
 if __name__ == "__main__":
