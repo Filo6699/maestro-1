@@ -190,8 +190,7 @@ async def show_action_selection(
 
     buttons = []
     for action_name, action in server.actions.items():
-        description = f": {action.description}" if action.description else ""
-        button_text = f"{action_name}{description}"
+        button_text = action.title if action.title else action_name
         # Truncate button text if too long (limit is 64 chars)
         if len(button_text) > 60:
             button_text = button_text[:57] + "..."
